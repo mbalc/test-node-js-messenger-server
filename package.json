@@ -1,0 +1,27 @@
+{
+  "name": "test-node-js-messenger-server",
+  "version": "0.0.0",
+  "description": "Simple node.js-based headless HTTP API server broadcasting messages via Messenger",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mbalc/test-node-js-messenger-server.git"
+  },
+  "keywords": [
+    "Facebook",
+    "Messenger",
+    "FB",
+    "JS",
+    "HTTP",
+    "server"
+  ],
+  "author": "Michał Balcerzak <michal@radcode.co>",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/mbalc/test-node-js-messenger-server/issues"
+  },
+  "homepage": "https://github.com/mbalc/test-node-js-messenger-server#readme"
+}
