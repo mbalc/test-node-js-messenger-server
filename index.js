@@ -11,28 +11,46 @@ const client = new pg.Client(`postgres://${config.pgUsername}:${config.pgPasswor
 app.use(bodyParser.text());
 
 client.connect();
+client.query('DROP TABLE IF EXISTS userBase');
 client.query('CREATE TABLE IF NOT EXISTS userBase (id int)');
-client.query('TRUNCATE TABLE userBase');
 
-function AddUser(pay, res) {
-  console.log('adding a user...');
+// finds value assigned to $key in the body of a given payload
+// if the key was not found:
+//   returns null - if $key was not found
+//   sets appropriate status for request response
+// else - returns specified value
+function PullProp(pay, res, key) {
   let reqBodyObj = {};
   try {
     reqBodyObj = JSON.parse(pay.body);
   } catch (e) {
     console.log('Invalid request body in form of');
     console.log(pay.body);
-    return res
+    res
       .status(400)
       .send('Request body not a valid JSON object / parseable string!');
+    return null;
   }
 
-  if ('id' in reqBodyObj) {
-    const userID = reqBodyObj.id;
+  if (key in reqBodyObj) {
+    return reqBodyObj[key];
+  }
 
+  res
+    .status(400)
+    .send(`Request object doesn't contain ${key} key!`);
+  return null;
+}
+
+function AddUser(pay, res) {
+  console.log('adding a user...');
+  console.log(PullProp(pay, res, 'id'));
+
+  const userID = PullProp(pay, res, 'id');
+  if (userID != null) {
     return client.query(`SELECT 1 FROM userBase WHERE id = ${userID}`, (err, out) => {
       console.log(out.rows);
-      if (out.rows.size() > 0) { // todo need proper empty array check
+      if (out.rows.length > 0) { // todo need proper empty array check
         res
           .status(400)
           .send(`User of ID=${userID} has already been added to database, ignoring request...`);
@@ -44,10 +62,6 @@ function AddUser(pay, res) {
       }
     });
   }
-
-  return res
-    .status(400)
-    .send('Request object doesn\'t contain "id" key!');
 }
 
 function ListUsers(pay, res) {
@@ -60,7 +74,7 @@ function ListUsers(pay, res) {
 }
 
 function SendMessage(pay, res) {
-  console.log('sending user a message...');
+  console.log('sending users a message...');
 }
 
 app.post('/recipients', AddUser);
