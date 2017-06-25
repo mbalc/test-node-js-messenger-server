@@ -1,0 +1,13 @@
+{
+
+  "serverHostPath": "localhost",
+  "serverPort": 8080,
+
+  "pgPort": 5432,
+  "pgUsername": "postgres",
+  "pgPassword": "postgres",
+  "pgDatabaseName": "postgres",
+
+  "pageAccessToken": "EAAGK1nECE4gBAEl5jtPP0a6ipq8MuTyVWwNqw1hkAzoOvsjr1eLc0lAlENBZCQI0e55bE0sroba3gzS9shivGZBzbGmpUnFOvEgvyHAjhzlZCAFFHKakFsRxCDI8qL1gOUcZBZAY9dpUveXpAhyGo1OyjdBq3nLyzZCmCAZCupMZAQZDZD"
+
+}

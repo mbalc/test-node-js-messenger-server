@@ -4,11 +4,10 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const pg = require('pg');
 const XMLHttpRequest = require('xmlhttprequest').XMLHttpRequest;
-const request = require('request');
 
 
 const app = express();
-const client = new pg.Pool({
+const pool = new pg.Pool({
   host: config.serverHostPath,
   port: config.pgPort,
   user: config.pgUsername,
@@ -18,9 +17,9 @@ const client = new pg.Pool({
 
 app.use(bodyParser.text());
 
-client.connect(() =>
-  client.query('DROP TABLE IF EXISTS userBase', () =>
-    client.query('CREATE TABLE IF NOT EXISTS userBase (id bigint)',
+pool.connect(() =>
+  pool.query('DROP TABLE IF EXISTS userBase', () =>
+    pool.query('CREATE TABLE IF NOT EXISTS userBase (id bigint)',
   )));
 
 // finds value assigned to $key in the body of a given payload
@@ -54,16 +53,16 @@ function PullProp(pay, res, key) {
 function AddUser(pay, res) {
   console.log('adding a user...');
   const userID = PullProp(pay, res, 'id');
-  console.log(userID);
+  console.log(`ID = ${userID}`);
   if (userID != null) {
-    client.query(`SELECT 1 FROM userBase WHERE id = ${userID}`, (err, out) => {
+    pool.query(`SELECT 1 FROM userBase WHERE id = ${userID}`, (err, out) => {
       if (err) console.log(err);
       else if (out.rows.length > 0) {
         res
           .status(400)
           .send(`User of ID=${userID} has already been added to database, ignoring request...`);
       } else {
-        client.query(`INSERT INTO userBase (id) VALUES (${userID})`);
+        pool.query(`INSERT INTO userBase (id) VALUES (${userID})`);
         res
           .status(200)
           .send(`User of ID=${userID} successfully added to database!`);
@@ -74,7 +73,7 @@ function AddUser(pay, res) {
 
 function ListUsers(pay, res) {
   console.log('listing users...');
-  client.query('SELECT * FROM userBase', (err, out) => {
+  pool.query('SELECT * FROM userBase', (err, out) => {
     res
       .status(200)
       .send(out.rows);
@@ -84,9 +83,10 @@ function ListUsers(pay, res) {
 function SendMessage(pay, res) {
   console.log('sending users a message...');
   const message = PullProp(pay, res, 'message');
-  client.query('SELECT * FROM userBase', (err, out) => {
+  console.log(message);
+
+  pool.query('SELECT * FROM userBase', (err, out) => {
     out.rows.forEach((obj) => {
-      console.log(message);
       const data = {
         recipient: {
           id: `${obj.id}`,
@@ -95,6 +95,7 @@ function SendMessage(pay, res) {
           text: message,
         },
       };
+
       const xmlreq = new XMLHttpRequest();
       xmlreq.open('POST', `https://graph.facebook.com/v2.6/me/messages?access_token=${config.pageAccessToken}`, true);
       xmlreq.setRequestHeader('Content-Type', 'application/json');
@@ -106,6 +107,8 @@ function SendMessage(pay, res) {
       xmlreq.send(JSON.stringify(data));
     });
   });
+
+  res.status(200).send('Sending the message to all recipients...');
 }
 
 app.post('/recipients', AddUser);
