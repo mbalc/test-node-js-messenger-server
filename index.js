@@ -4,17 +4,24 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const pg = require('pg');
 const XMLHttpRequest = require('xmlhttprequest').XMLHttpRequest;
+const request = require('request');
 
 
 const app = express();
-const client = new pg.Client(`postgres://${config.pgUsername}:${config.pgPassword}
-  @${config.serverHostPath}:${config.pgPort}/${config.pgDatabaseName}`);
+const client = new pg.Pool({
+  host: config.serverHostPath,
+  port: config.pgPort,
+  user: config.pgUsername,
+  password: config.pgPassword,
+  database: config.pgDatabaseName,
+});
 
 app.use(bodyParser.text());
 
-client.connect();
-client.query('DROP TABLE IF EXISTS userBase');
-client.query('CREATE TABLE IF NOT EXISTS userBase (id bigint)');
+client.connect(() =>
+  client.query('DROP TABLE IF EXISTS userBase', () =>
+    client.query('CREATE TABLE IF NOT EXISTS userBase (id bigint)',
+  )));
 
 // finds value assigned to $key in the body of a given payload
 // if the key was not found:
@@ -47,10 +54,11 @@ function PullProp(pay, res, key) {
 function AddUser(pay, res) {
   console.log('adding a user...');
   const userID = PullProp(pay, res, 'id');
+  console.log(userID);
   if (userID != null) {
     client.query(`SELECT 1 FROM userBase WHERE id = ${userID}`, (err, out) => {
-      console.log(out.rows);
-      if (out.rows.length > 0) {
+      if (err) console.log(err);
+      else if (out.rows.length > 0) {
         res
           .status(400)
           .send(`User of ID=${userID} has already been added to database, ignoring request...`);
@@ -78,6 +86,7 @@ function SendMessage(pay, res) {
   const message = PullProp(pay, res, 'message');
   client.query('SELECT * FROM userBase', (err, out) => {
     out.rows.forEach((obj) => {
+      console.log(message);
       const data = {
         recipient: {
           id: `${obj.id}`,
@@ -86,20 +95,15 @@ function SendMessage(pay, res) {
           text: message,
         },
       };
-      console.log(data);
-      const request = new XMLHttpRequest();
-      request.open('POST', `https://graph.facebook.com/v2.6/me/messages?access_token=${config.pageAccessToken}`, true);
-      request.setRequestHeader('Content-Type', 'application/json');
-      // subscribe to this event before you send your request.
-      request.onreadystatechange = function () {
-        if (request.readyState == 4) {
-   // alert the user that a response now exists in the responseTest property.
-          console.log(request.responseText);
-   // And to view in firebug
-          console.log('xhr', request);
+      const xmlreq = new XMLHttpRequest();
+      xmlreq.open('POST', `https://graph.facebook.com/v2.6/me/messages?access_token=${config.pageAccessToken}`, true);
+      xmlreq.setRequestHeader('Content-Type', 'application/json');
+      xmlreq.onreadystatechange = () => {
+        if (xmlreq.readyState === 4) {
+          console.log(`messaging user ${obj.id}: ${xmlreq.responseText}`);
         }
       };
-      request.send(JSON.stringify(data));
+      xmlreq.send(JSON.stringify(data));
     });
   });
 }
